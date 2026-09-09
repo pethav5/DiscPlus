@@ -2,7 +2,7 @@
   "name": "Wax Tracker",
   "short_name": "Wax",
   "description": "Track your vinyl collection value and listening history",
-  "start_url": "/index.html",
+  "start_url": "/DiscPlus",
   "display": "standalone",
   "background_color": "#1a1208",
   "theme_color": "#1a1208",

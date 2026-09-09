@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wax Tracker">
+<meta name="theme-color" content="#1a1208">
+<link rel="manifest" href="manifest.json">
+<title>Wax Tracker</title>
+<style>
+  :root {
+    --bg:       #0a0f1e;
+    --surface:  #111827;
+    --raised:   #1a2236;
+    --groove:   #2a3650;
+    --amber:    #f5c518;
+    --amber-dim:#c9a010;
+    --cream:    #f0f4ff;
+    --muted:    #6b7fa8;
+    --danger:   #e53e3e;
+    --green:    #38a169;
+    --safe:     env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: var(--bg);
+    color: var(--cream);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: calc(80px + var(--safe));
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    padding: 52px 20px 16px;
+    border-bottom: 1px solid var(--groove);
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--amber);
+  }
+  .header .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .total-value {
+    margin-top: 12px;
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--groove);
+  }
+  .total-value .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .total-value .amount { font-size: 24px; font-weight: 700; color: var(--amber); }
+  .total-value .count { font-size: 12px; color: var(--muted); text-align: right; }
+
+  /* ── Nav ── */
+  .nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border-top: 1px solid var(--groove);
+    display: flex;
+    padding-bottom: var(--safe);
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 12px 8px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .nav-btn.active { color: var(--amber); }
+  .nav-btn svg { width: 22px; height: 22px; }
+
+  /* ── Views ── */
+  .view { display: none; padding: 16px 20px; }
+  .view.active { display: block; }
+
+  /* ── Search ── */
+  .search-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .search-bar input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--groove);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--cream);
+    font-size: 15px;
+    outline: none;
+  }
+  .search-bar input::placeholder { color: var(--muted); }
+  .search-bar input:focus { border-color: var(--amber-dim); }
+
+  .btn {
+    background: var(--amber);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:active { opacity: 0.8; }
+  .btn.secondary {
+    background: var(--raised);
+    color: var(--cream);
+    border: 1px solid var(--groove);
+  }
+  .btn.danger { background: var(--danger); color: white; }
+  .btn.sm { padding: 7px 12px; font-size: 13px; }
+
+  /* ── Token input ── */
+  .token-notice {
+    background: var(--surface);
+    border: 1px solid var(--groove);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .token-notice a { color: var(--amber); }
+  .token-row { display: flex; gap: 8px; margin-top: 10px; }
+  .token-row input {
+    flex: 1;
+    background: var(--raised);
+    border: 1px solid var(--groove);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--cream);
+    font-size: 14px;
+    outline: none;
+  }
+
+  /* ── Result cards ── */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--groove);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .result-card img {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--raised);
+    flex-shrink: 0;
+  }
+  .result-info { flex: 1; min-width: 0; }
+  .result-info .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result-info .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .result-info .price { font-size: 13px; color: var(--amber); margin-top: 4px; font-weight: 600; }
+
+  /* ── Collection ── */
+  .section-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+  .record-card {
+    background: var(--surface);
+    border: 1px solid var(--groove);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+  }
+  .record-card img {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--raised);
+    flex-shrink: 0;
+  }
+  .record-body { flex: 1; min-width: 0; }
+  .record-body .title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .record-body .artist { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .record-body .year { font-size: 12px; color: var(--muted); }
+  .record-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .record-price { font-size: 16px; font-weight: 700; color: var(--amber); }
+  .record-price .stale { font-size: 10px; color: var(--muted); font-weight: 400; display: block; }
+  .record-actions { display: flex; gap: 6px; }
+
+  /* Listen button pulse */
+  .listen-btn {
+    background: var(--raised);
+    border: 1px solid var(--groove);
+    border-radius: 8px;
+    color: var(--cream);
+    padding: 7px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .listen-btn:active { background: var(--amber); color: var(--bg); }
+  .listen-btn svg { width: 14px; height: 14px; }
+
+  /* Play count badge */
+  .play-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--raised);
+    border: 1px solid var(--groove);
+    border-radius: 20px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--amber);
+    font-weight: 600;
+  }
+  .play-count svg { width: 11px; height: 11px; }
+  .play-count.zero { color: var(--muted); }
+
+  /* Last listened */
+  .last-listened {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .last-listened span { color: var(--cream); }
+
+  /* ── Listening log ── */
+  .log-entry {
+    background: var(--surface);
+    border: 1px solid var(--groove);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .log-entry img { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--raised); flex-shrink: 0; }
+  .log-info { flex: 1; min-width: 0; }
+  .log-info .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log-info .time { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .log-count { font-size: 11px; color: var(--amber); background: var(--raised); border-radius: 20px; padding: 3px 8px; white-space: nowrap; }
+
+  /* ── Settings ── */
+  .settings-section { margin-bottom: 24px; }
+  .settings-section h3 { font-size: 13px; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .settings-row {
+    background: var(--surface);
+    border: 1px solid var(--groove);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .settings-row .label { font-size: 15px; }
+  .settings-row .val { font-size: 13px; color: var(--muted); }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+  }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 15px; line-height: 1.5; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: calc(90px + var(--safe));
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--amber);
+    color: var(--bg);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px calc(20px + var(--safe));
+    width: 100%;
+    max-width: 480px;
+    border-top: 1px solid var(--groove);
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+  .period-btn { background: var(--raised); color: var(--muted); border: 1px solid var(--groove); }
+  .period-btn.active { background: var(--amber); color: var(--bg); border-color: var(--amber); }
+
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid var(--groove);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .price-badge {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: var(--raised);
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .price-badge.live { background: #1a3320; color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>Wax Tracker</h1>
+  <div class="subtitle">Your vinyl collection</div>
+  <div class="total-value">
+    <div>
+      <div class="label">Collection value</div>
+      <div class="amount" id="totalValue">$0.00</div>
+    </div>
+    <div class="count" id="recordCount">0 records</div>
+  </div>
+</div>
+
+<!-- Views -->
+<div id="view-collection" class="view active">
+  <div id="collectionList"></div>
+</div>
+
+<div id="view-search" class="view">
+  <div class="token-notice" id="tokenNotice" style="display:none">
+    To fetch live Discogs prices, you need a free Discogs API token.<br>
+    <a href="https://www.discogs.com/settings/developers" target="_blank">Get your token here</a> — log in, click "Generate new token."
+    <div class="token-row">
+      <input type="text" id="tokenInput" placeholder="Paste your token here">
+      <button class="btn sm" onclick="saveToken()">Save</button>
+    </div>
+  </div>
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Artist, album, or label..." onkeydown="if(event.key==='Enter')searchDiscogs()">
+    <button class="btn" onclick="searchDiscogs()">Search</button>
+  </div>
+  <div id="searchResults"></div>
+</div>
+
+<div id="view-log" class="view">
+  <div id="logList"></div>
+</div>
+
+<div id="view-settings" class="view">
+  <div class="settings-section">
+    <h3>Discogs API</h3>
+    <div class="settings-row">
+      <span class="label">API Token</span>
+      <span class="val" id="tokenStatus">Not set</span>
+    </div>
+    <div class="token-row" style="margin-bottom:16px">
+      <input type="text" id="settingsTokenInput" placeholder="Enter token to update">
+      <button class="btn sm" onclick="saveTokenFromSettings()">Save</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>Play Count Display</h3>
+    <div class="settings-row" style="flex-wrap:wrap;gap:8px">
+      <span class="label">Show plays from</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn sm period-btn" data-period="week"  onclick="setPeriod('week')">This week</button>
+        <button class="btn sm period-btn" data-period="month" onclick="setPeriod('month')">This month</button>
+        <button class="btn sm period-btn" data-period="year"  onclick="setPeriod('year')">This year</button>
+        <button class="btn sm period-btn" data-period="all"   onclick="setPeriod('all')">All time</button>
+      </div>
+    </div>
+  </div>
+    <div class="token-notice" style="display:block;margin-bottom:10px">
+      Enter your Discogs username to import your existing collection. Prices will be fetched automatically if you have an API token set above.<br><br>
+      <strong style="color:var(--cream)">Note:</strong> This will add any records not already in your local collection.
+    </div>
+    <div class="token-row" style="margin-bottom:8px">
+      <input type="text" id="discogsUsername" placeholder="Your Discogs username">
+      <button class="btn sm" onclick="importFromDiscogs()">Import</button>
+    </div>
+    <div id="importStatus" style="font-size:13px;color:var(--muted);margin-top:6px"></div>
+  </div>
+
+  <div class="settings-section">
+    <h3>Data</h3>
+    <div class="settings-row">
+      <span class="label">Records in collection</span>
+      <span class="val" id="settingsCount">0</span>
+    </div>
+    <div class="settings-row">
+      <span class="label">Listening sessions</span>
+      <span class="val" id="settingsPlays">0</span>
+    </div>
+  </div>
+  <button class="btn danger" style="width:100%;margin-top:8px" onclick="clearAll()">Clear all data</button>
+</div>
+
+<!-- Nav -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showView('collection', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+    Collection
+  </button>
+  <button class="nav-btn" onclick="showView('search', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Search
+  </button>
+  <button class="nav-btn" onclick="showView('log', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+    Log
+  </button>
+  <button class="nav-btn" onclick="showView('settings', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </button>
+</nav>
+
+<!-- Delete modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h2>Remove record?</h2>
+    <p style="color:var(--muted);font-size:14px" id="deleteModalText"></p>
+    <div class="modal-actions">
+      <button class="btn secondary" style="flex:1" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn danger" style="flex:1" id="confirmDeleteBtn">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let collection = JSON.parse(localStorage.getItem('wax_collection') || '[]');
+let listenLog  = JSON.parse(localStorage.getItem('wax_log') || '[]');
+let token      = localStorage.getItem('wax_token') || '';
+let playPeriod = localStorage.getItem('wax_period') || 'all';
+
+function save() {
+  localStorage.setItem('wax_collection', JSON.stringify(collection));
+  localStorage.setItem('wax_log', JSON.stringify(listenLog));
+}
+
+// ── Nav ────────────────────────────────────────────────────────────────
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'collection') renderCollection();
+  if (name === 'log')        renderLog();
+  if (name === 'settings')   renderSettings();
+  if (name === 'search')     checkToken();
+}
+
+// ── Token ──────────────────────────────────────────────────────────────
+function checkToken() {
+  document.getElementById('tokenNotice').style.display = token ? 'none' : 'block';
+}
+function saveToken() {
+  token = document.getElementById('tokenInput').value.trim();
+  if (token) { localStorage.setItem('wax_token', token); document.getElementById('tokenNotice').style.display = 'none'; toast('Token saved'); }
+}
+function saveTokenFromSettings() {
+  token = document.getElementById('settingsTokenInput').value.trim();
+  if (token) { localStorage.setItem('wax_token', token); renderSettings(); toast('Token saved'); }
+}
+
+// ── Discogs search ─────────────────────────────────────────────────────
+async function searchDiscogs() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  const el = document.getElementById('searchResults');
+  el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)"><span class="spinner"></span> Searching Discogs...</div>';
+
+  try {
+    const params = new URLSearchParams({ q, type: 'release', per_page: 15, page: 1 });
+    if (token) params.set('token', token);
+    const res  = await fetch(`https://api.discogs.com/database/search?${params}`);
+    const data = await res.json();
+
+    if (!data.results || data.results.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="icon">🎵</div><p>No results found. Try a different search.</p></div>';
+      return;
+    }
+
+    el.innerHTML = data.results.map(r => `
+      <div class="result-card">
+        <img src="${r.cover_image || r.thumb || ''}" onerror="this.src=''" alt="">
+        <div class="result-info">
+          <div class="title">${r.title}</div>
+          <div class="meta">${r.year || '–'} · ${r.format ? r.format.join(', ') : '–'}</div>
+          <div class="price" id="price-${r.id}">Fetching price…</div>
+        </div>
+        <button class="btn sm" onclick="addToCollection(${JSON.stringify(r).replace(/"/g,'&quot;')})">Add</button>
+      </div>
+    `).join('');
+
+    // Fetch prices in background
+    data.results.forEach(r => fetchPrice(r.id));
+
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>Search failed. Check your connection or token.</p></div>';
+  }
+}
+
+async function fetchPrice(releaseId) {
+  try {
+    const params = token ? `?token=${token}` : '';
+    const res  = await fetch(`https://api.discogs.com/releases/${releaseId}${params}`);
+    const data = await res.json();
+    const el   = document.getElementById('price-' + releaseId);
+    if (!el) return;
+    if (data.lowest_price) {
+      el.innerHTML = `$${data.lowest_price.toFixed(2)} <span class="price-badge live">live</span>`;
+      el.dataset.price = data.lowest_price;
+    } else {
+      el.textContent = 'No listings';
+    }
+  } catch(e) { /* silent */ }
+}
+
+// ── Add to collection ──────────────────────────────────────────────────
+async function addToCollection(r) {
+  if (collection.find(x => x.id === r.id)) { toast('Already in collection'); return; }
+
+  let price = 0;
+  try {
+    const params = token ? `?token=${token}` : '';
+    const res  = await fetch(`https://api.discogs.com/releases/${r.id}${params}`);
+    const data = await res.json();
+    price = data.lowest_price || 0;
+  } catch(e) {}
+
+  const record = {
+    id:        r.id,
+    title:     r.title,
+    year:      r.year || '',
+    format:    r.format ? r.format.join(', ') : '',
+    thumb:     r.cover_image || r.thumb || '',
+    price:     price,
+    priceDate: new Date().toISOString(),
+    added:     new Date().toISOString(),
+    plays:     0,
+  };
+
+  collection.push(record);
+  save();
+  updateHeader();
+  toast(`Added — ${r.title.substring(0, 30)}`);
+}
+
+function setPeriod(p) {
+  playPeriod = p;
+  localStorage.setItem('wax_period', p);
+  renderSettings();
+  renderCollection();
+}
+
+function periodCutoff() {
+  const now = new Date();
+  if (playPeriod === 'week')  { const d = new Date(now); d.setDate(d.getDate()-7); return d; }
+  if (playPeriod === 'month') { const d = new Date(now); d.setMonth(d.getMonth()-1); return d; }
+  if (playPeriod === 'year')  { const d = new Date(now); d.setFullYear(d.getFullYear()-1); return d; }
+  return null; // all time
+}
+
+function playsForRecord(id) {
+  const cutoff = periodCutoff();
+  return listenLog.filter(e => e.id === id && (!cutoff || new Date(e.ts) >= cutoff)).length;
+}
+
+function lastListenedFor(id) {
+  const entry = listenLog.find(e => e.id === id);
+  if (!entry) return null;
+  return entry.ts;
+}
+
+function periodLabel() {
+  if (playPeriod === 'week')  return 'this week';
+  if (playPeriod === 'month') return 'this month';
+  if (playPeriod === 'year')  return 'this year';
+  return 'all time';
+}
+
+// ── Collection ─────────────────────────────────────────────────────────
+function renderCollection() {
+  const el = document.getElementById('collectionList');
+  updateHeader();
+
+  if (collection.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="icon">🎶</div><p>Your collection is empty.<br>Search for records to add them.</p></div>';
+    return;
+  }
+
+  const sorted = [...collection].sort((a,b) => (b.price||0) - (a.price||0));
+
+  el.innerHTML = `<div class="section-label">${collection.length} record${collection.length!==1?'s':''} · plays shown ${periodLabel()}</div>` +
+    sorted.map(r => {
+      const plays    = playsForRecord(r.id);
+      const lastTs   = lastListenedFor(r.id);
+      const lastStr  = lastTs ? timeAgo(lastTs) : null;
+      return `
+      <div class="record-card">
+        <img src="${r.thumb}" onerror="this.style.display='none'" alt="">
+        <div class="record-body">
+          <div class="title">${r.title}</div>
+          <div class="artist">${r.year} ${r.format ? '· ' + r.format : ''}</div>
+          ${lastStr ? `<div class="last-listened">Last played <span>${lastStr}</span></div>` : '<div class="last-listened">Never played</div>'}
+          <div class="record-meta">
+            <div class="record-price">
+              ${r.price ? '$' + r.price.toFixed(2) : 'No price'}
+              <span class="stale">${r.price ? 'via Discogs · ' + timeAgo(r.priceDate) : ''}</span>
+            </div>
+            <div class="record-actions">
+              <span class="play-count ${plays===0?'zero':''}">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg>
+                ${plays}
+              </span>
+              <button class="listen-btn" onclick="logListen(${r.id})" title="Log a listen">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg>
+                Play
+              </button>
+              <button class="listen-btn" onclick="refreshPrice(${r.id})" title="Refresh price">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </button>
+              <button class="listen-btn" onclick="confirmDelete(${r.id})" title="Remove">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `}).join('');
+}
+
+function updateHeader() {
+  const total = collection.reduce((s, r) => s + (r.price || 0), 0);
+  document.getElementById('totalValue').textContent = '$' + total.toFixed(2);
+  document.getElementById('recordCount').textContent = collection.length + ' record' + (collection.length!==1?'s':'');
+}
+
+async function refreshPrice(id) {
+  const r = collection.find(x => x.id === id);
+  if (!r) return;
+  toast('Refreshing price…');
+  try {
+    const params = token ? `?token=${token}` : '';
+    const res  = await fetch(`https://api.discogs.com/releases/${id}${params}`);
+    const data = await res.json();
+    if (data.lowest_price) {
+      r.price = data.lowest_price;
+      r.priceDate = new Date().toISOString();
+      save();
+      renderCollection();
+      toast('Price updated');
+    } else {
+      toast('No listings on Discogs');
+    }
+  } catch(e) { toast('Could not fetch price'); }
+}
+
+// ── Delete ─────────────────────────────────────────────────────────────
+let pendingDeleteId = null;
+function confirmDelete(id) {
+  const r = collection.find(x => x.id === id);
+  pendingDeleteId = id;
+  document.getElementById('deleteModalText').textContent = r ? r.title : '';
+  document.getElementById('deleteModal').classList.add('open');
+  document.getElementById('confirmDeleteBtn').onclick = () => {
+    collection = collection.filter(x => x.id !== pendingDeleteId);
+    save();
+    renderCollection();
+    closeModal('deleteModal');
+    toast('Removed from collection');
+  };
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Listen log ─────────────────────────────────────────────────────────
+function logListen(id) {
+  const r = collection.find(x => x.id === id);
+  if (!r) return;
+  r.plays = (r.plays || 0) + 1;
+  listenLog.unshift({ id, title: r.title, thumb: r.thumb, ts: new Date().toISOString() });
+  if (listenLog.length > 500) listenLog = listenLog.slice(0, 500);
+  save();
+  toast('Logged — ' + r.title.substring(0, 25));
+  renderCollection();
+}
+
+function renderLog() {
+  const el = document.getElementById('logList');
+  if (listenLog.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="icon">🎧</div><p>No listens logged yet.<br>Tap Play on any record in your collection.</p></div>';
+    return;
+  }
+
+  // Group by day
+  const groups = {};
+  listenLog.forEach(e => {
+    const day = new Date(e.ts).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    if (!groups[day]) groups[day] = [];
+    groups[day].push(e);
+  });
+
+  el.innerHTML = Object.entries(groups).map(([day, entries]) => `
+    <div class="section-label">${day}</div>
+    ${entries.map(e => `
+      <div class="log-entry">
+        <img src="${e.thumb}" onerror="this.style.display='none'" alt="">
+        <div class="log-info">
+          <div class="title">${e.title}</div>
+          <div class="time">${new Date(e.ts).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' })}</div>
+        </div>
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+// ── Settings ───────────────────────────────────────────────────────────
+function renderSettings() {
+  document.getElementById('tokenStatus').textContent = token ? '••••' + token.slice(-4) : 'Not set';
+  document.getElementById('settingsCount').textContent = collection.length;
+  document.getElementById('settingsPlays').textContent = listenLog.length;
+  document.querySelectorAll('.period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.period === playPeriod);
+  });
+}
+
+function clearAll() {
+  if (!confirm('Clear all records and listening history?')) return;
+  collection = []; listenLog = [];
+  save();
+  renderCollection();
+  toast('All data cleared');
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+function timeAgo(iso) {
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if (diff < 60)     return 'just now';
+  if (diff < 3600)   return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400)  return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Import from Discogs ────────────────────────────────────────────────
+async function importFromDiscogs() {
+  const username = document.getElementById('discogsUsername').value.trim();
+  if (!username) { toast('Enter your Discogs username'); return; }
+
+  const statusEl = document.getElementById('importStatus');
+  statusEl.innerHTML = '<span class="spinner"></span> Fetching your collection…';
+
+  let page = 1, total = 0, added = 0, skipped = 0;
+  const perPage = 100;
+
+  try {
+    while (true) {
+      const params = new URLSearchParams({ page, per_page: perPage });
+      if (token) params.set('token', token);
+
+      const res  = await fetch(`https://api.discogs.com/users/${username}/collection/folders/0/releases?${params}`);
+      if (!res.ok) {
+        if (res.status === 404) { statusEl.textContent = 'User not found. Check the username.'; return; }
+        if (res.status === 401) { statusEl.textContent = 'Collection is private. Make it public on Discogs or use your API token.'; return; }
+        throw new Error('HTTP ' + res.status);
+      }
+
+      const data = await res.json();
+      total = data.pagination.items;
+      const releases = data.releases || [];
+
+      statusEl.innerHTML = `<span class="spinner"></span> Importing… ${Math.min(page * perPage, total)} of ${total}`;
+
+      for (const item of releases) {
+        const info = item.basic_information;
+        if (collection.find(x => x.id === info.id)) { skipped++; continue; }
+
+        const record = {
+          id:        info.id,
+          title:     info.artists?.[0]?.name ? `${info.artists[0].name} – ${info.title}` : info.title,
+          year:      info.year || '',
+          format:    info.formats?.[0]?.name || '',
+          thumb:     info.cover_image || info.thumb || '',
+          price:     0,
+          priceDate: null,
+          added:     new Date().toISOString(),
+          plays:     0,
+        };
+
+        collection.push(record);
+        added++;
+      }
+
+      save();
+
+      if (page >= data.pagination.pages) break;
+      page++;
+      // Small delay to respect Discogs rate limit (60 req/min)
+      await new Promise(r => setTimeout(r, 1100));
+    }
+
+    // Now fetch prices in background
+    statusEl.textContent = `Imported ${added} records (${skipped} already existed). Fetching prices in background…`;
+    updateHeader();
+    renderSettings();
+
+    const newRecords = collection.filter(r => r.price === 0 && r.priceDate === null);
+    let pricesFetched = 0;
+    for (const r of newRecords) {
+      try {
+        const params = token ? `?token=${token}` : '';
+        const res  = await fetch(`https://api.discogs.com/releases/${r.id}${params}`);
+        const data = await res.json();
+        if (data.lowest_price) { r.price = data.lowest_price; r.priceDate = new Date().toISOString(); }
+        pricesFetched++;
+        if (pricesFetched % 10 === 0) {
+          save();
+          updateHeader();
+          statusEl.textContent = `Fetching prices… ${pricesFetched} of ${newRecords.length}`;
+        }
+        await new Promise(r => setTimeout(r, 1100));
+      } catch(e) { /* skip */ }
+    }
+
+    save();
+    updateHeader();
+    statusEl.textContent = `Done! ${added} records imported, prices fetched.`;
+    toast('Collection imported!');
+
+  } catch(e) {
+    statusEl.textContent = 'Import failed: ' + e.message;
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────
+renderCollection();
+</script>
+</body>
+</html>
